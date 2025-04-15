@@ -54,5 +54,38 @@ Após esses passos, inicie a aplicação:
 npm run start
 ```
 
+🐳 Executando com Docker Compose
+Caso prefira rodar a aplicação com Docker Compose (incluindo PostgreSQL e Redis automaticamente), siga os passos abaixo:
 
+1. Crie o arquivo .env
+Crie um arquivo .env na raiz do projeto com o seguinte conteúdo:
+ ```bash
+DB_HOST=postgres
+DB_PORT=5432
+DB_USERNAME=docker
+DB_PASSWORD=docker
+DB_NAME=abinbev
 
+REDIS_HOST=redis
+REDIS_PORT=6379
+```
+⚠️ Esses valores correspondem aos nomes dos serviços definidos no docker-compose.yml.
+
+2. Execute o Docker Compose
+No terminal, execute o comando abaixo para buildar e iniciar os containers:
+ ```bash
+docker-compose up --build
+```
+sso iniciará:
+
+O backend (porta 8080)
+
+O banco PostgreSQL (porta 5432)
+
+O Redis (porta 6379)
+
+3. Acesse a aplicação
+Após o processo de inicialização, a API estará disponível em:
+ ```bash
+http://localhost:8080
+```
