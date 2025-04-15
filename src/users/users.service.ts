@@ -1,8 +1,11 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { UserCreateDTO } from './DTOs/UserCreateDTO';
 import { User } from './user.entity';
 import { DeleteResult, Repository } from 'typeorm';
@@ -14,6 +17,8 @@ export class UserService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @Inject(CACHE_MANAGER)
+    private cacheManager: Cache,
   ) {}
 
   public async createUserService(user: UserCreateDTO): Promise<User> {
@@ -28,15 +33,33 @@ export class UserService {
     }
 
     const newUser = this.userRepository.create(user);
+    const usersave = await this.userRepository.save(newUser);
 
-    return this.userRepository.save(newUser);
+    await this.cacheManager.set(`user:${usersave.id}`, usersave, 10000);
+
+    return usersave;
   }
 
   public async listAllUserService(): Promise<User[]> {
-    return await this.userRepository.find();
+    const cachedUsers = await this.cacheManager.get<User[]>('all_users');
+
+    if (cachedUsers) {
+      return cachedUsers;
+    }
+
+    const users = await this.userRepository.find();
+
+    await this.cacheManager.set('all_users', users, 10000);
+    return users;
   }
 
   public async listAllUserByIdService(id: string): Promise<User> {
+    const cachedUser = await this.cacheManager.get<User>(`user:${id}`);
+
+    if (cachedUser) {
+      return cachedUser;
+    }
+
     const user = await this.userRepository.findOneBy({ id });
 
     if (!user) {

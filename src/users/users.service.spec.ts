@@ -26,6 +26,11 @@ describe('UserService', () => {
     delete: jest.fn(),
   };
 
+  const mockCacheManager = {
+    get: jest.fn(),
+    set: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -34,6 +39,10 @@ describe('UserService', () => {
           provide: getRepositoryToken(User),
           useValue: mockRepository,
         },
+        {
+          provide: 'CACHE_MANAGER',
+          useValue: mockCacheManager,
+        },
       ],
     }).compile();
 
@@ -41,7 +50,7 @@ describe('UserService', () => {
     jest.clearAllMocks();
   });
 
-  it('shoud be create a new user', async () => {
+  it('should create a new user', async () => {
     mockRepository.findOne.mockResolvedValue(undefined);
     mockRepository.create.mockReturnValue(mockUser);
     mockRepository.save.mockResolvedValue(mockUser);
@@ -60,7 +69,7 @@ describe('UserService', () => {
     expect(mockRepository.save).toHaveBeenCalledWith(mockUser);
   });
 
-  it('not be able create a new user if exist a user', async () => {
+  it('should not be able to create a new user if a user already exists', async () => {
     mockRepository.findOne.mockResolvedValue(mockUser);
 
     await expect(
@@ -71,20 +80,40 @@ describe('UserService', () => {
     ).rejects.toThrow(BadRequestException);
   });
 
-  it('should be able list all user', async () => {
-    mockRepository.find.mockResolvedValue([mockUser]);
+  it('should list all users with cache', async () => {
+    mockCacheManager.get.mockResolvedValue([mockUser]);
+
     const result = await service.listAllUserService();
     expect(result).toEqual([mockUser]);
+    expect(mockCacheManager.get).toHaveBeenCalledWith('all_users');
+    expect(mockRepository.find).not.toHaveBeenCalled();
   });
 
-  it('shoudl be able list user by id', async () => {
+  it('should list all users from DB and cache it if not in cache', async () => {
+    mockCacheManager.get.mockResolvedValue(null);
+    mockRepository.find.mockResolvedValue([mockUser]);
+
+    const result = await service.listAllUserService();
+    expect(result).toEqual([mockUser]);
+    expect(mockCacheManager.get).toHaveBeenCalledWith('all_users');
+    expect(mockRepository.find).toHaveBeenCalled();
+    expect(mockCacheManager.set).toHaveBeenCalledWith(
+      'all_users',
+      [mockUser],
+      10000,
+    );
+  });
+
+  it('should list user by id', async () => {
     mockRepository.findOneBy.mockResolvedValue(mockUser);
+
     const result = await service.listAllUserByIdService('uuid-mockado');
     expect(result).toEqual(mockUser);
   });
 
   it('should throw an error if user is not found by id', async () => {
     mockRepository.findOneBy.mockResolvedValue(null);
+
     await expect(
       service.listAllUserByIdService('uuid-invalido'),
     ).rejects.toThrow(NotFoundException);
@@ -111,10 +140,12 @@ describe('UserService', () => {
 
   it('should throw an error when trying to update a non-existent user', async () => {
     mockRepository.preload.mockResolvedValue(null);
+
     const dto: UpdateUserDto = {
       name: 'Inexistente',
       email: 'marceloandrebio@gmail.com',
     };
+
     await expect(service.updateUserService('uuid-fake', dto)).rejects.toThrow(
       NotFoundException,
     );
@@ -123,6 +154,7 @@ describe('UserService', () => {
   it('should delete a user', async () => {
     const mockDeleteResult: DeleteResult = { affected: 1, raw: [] };
     mockRepository.delete.mockResolvedValue(mockDeleteResult);
+
     const result = await service.deleteUserSerivce('uuid-mockado');
     expect(result).toEqual(mockDeleteResult);
   });
