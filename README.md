@@ -89,3 +89,9 @@ Após o processo de inicialização, a API estará disponível em:
  ```bash
 http://localhost:8080
 ```
+
+4. Repositório do Frontend
+Você pode acessar o repositório do frontend no link abaixo:
+ ```bash
+https://github.com/Marcelo8173/Take-home-frontend/tree/main
+```
