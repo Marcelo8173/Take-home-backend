@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  app:
+    container_name: abinbev-backend
+    build: .
+    ports:
+      - "8080:3000"
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: docker
+      DB_PASSWORD: docker
+      DB_NAME: abinbev
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    volumes:
+      - .:/usr/src/app
+    command: npm run start:dev
+
+  postgres:
+    container_name: abinbev-postgres
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: docker
+      POSTGRES_PASSWORD: docker
+      POSTGRES_DB: abinbev
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    container_name: abinbev-redis
+    image: redis:7
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+
+volumes:
+  pgdata:
+  redisdata:
